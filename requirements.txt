@@ -1,0 +1,14 @@
+Flask
+Flask-SQLAlchemy
+Flask-CORS
+Flask-Login
+Flask-Dance
+python-dotenv
+google-genai
+openai
+groq
+Werkzeug
+requests
+gunicorn
+psycopg2-binary
+twilio
