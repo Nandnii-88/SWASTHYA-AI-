@@ -1,0 +1,161 @@
+def ask_gemini(
+    message,
+    history="",
+    language="English"
+):
+
+    language_name = get_language(language)
+
+    print("\n")
+    print("=" * 70)
+    print("SWASTHYAAI 3-API TEXT VERIFICATION")
+    print("=" * 70)
+
+    emergency = detect_emergency(message)
+
+    gemini_result = ask_gemini_text(
+        message, history, language_name
+    )
+
+    openai_result = ask_openai_text(
+        message, history, language_name
+    )
+
+    groq_result = ask_groq_text(
+        message, history, language_name
+    )
+
+    print("Gemini:", "SUCCESS" if gemini_result else "FAILED")
+    print("OpenAI:", "SUCCESS" if openai_result else "FAILED")
+    print("Groq:",   "SUCCESS" if groq_result else "FAILED")
+
+    successful = [
+        r for r in [
+            gemini_result,
+            openai_result,
+            groq_result
+        ]
+        if r
+    ]
+
+    print("Successful providers:", len(successful))
+    print("=" * 70)
+
+    if not successful:
+
+        print("TEXT ANALYSIS FAILED COMPLETELY")
+        print("=" * 70)
+        print()
+
+        return (
+            "I couldn't generate a response right now. "
+            "Please check that the AI services and API keys "
+            "are configured correctly."
+        )
+
+    if len(successful) == 1:
+
+        answer = successful[0]
+
+        if emergency:
+            answer = (
+                "⚠️ **Potential emergency**\n\n"
+                "Some of the symptoms you described may "
+                "require urgent medical attention. If the "
+                "symptoms are severe, worsening, or life-threatening, "
+                "please seek emergency care immediately. "
+                "In India, you can call **112**.\n\n"
+                + answer
+            )
+
+        return answer
+
+    if gemini_client is not None:
+
+        synthesis_prompt = f"""
+{SYSTEM_PROMPT}
+
+Requested language:
+{language_name}
+
+User message:
+{message}
+
+Independent health-information responses:
+
+RESPONSE A:
+{gemini_result or "Unavailable"}
+
+RESPONSE B:
+{openai_result or "Unavailable"}
+
+RESPONSE C:
+{groq_result or "Unavailable"}
+
+Create ONE final answer for the user.
+
+Rules:
+
+- Do not mention the independent responses.
+- Do not mention AI providers.
+- Do not mention APIs.
+- Do not mention model names.
+- Do not expose internal verification.
+- Resolve disagreements conservatively.
+- Do not invent facts.
+- Never provide a definitive diagnosis.
+- Explain uncertainty when appropriate.
+- Give practical next steps.
+- Mention warning signs where relevant.
+- Respond entirely in {language_name}.
+"""
+
+        try:
+
+            response = gemini_client.models.generate_content(
+                model=GEMINI_MODEL,
+                contents=synthesis_prompt,
+                config=types.GenerateContentConfig(
+                    temperature=0.15
+                )
+            )
+
+            final_answer = clean_text(
+                getattr(response, "text", "")
+            )
+
+            if final_answer:
+
+                if emergency:
+                    final_answer = (
+                        "⚠️ **Potential emergency**\n\n"
+                        "Some of the symptoms described may "
+                        "require urgent medical attention. If "
+                        "symptoms are severe, worsening, or "
+                        "life-threatening, seek emergency care "
+                        "immediately. In India, call **112**.\n\n"
+                        + final_answer
+                    )
+
+                return final_answer
+
+        except Exception as e:
+
+            print("\n" + "=" * 70)
+            print("TEXT SYNTHESIS ERROR")
+            print("TYPE:", type(e).__name__)
+            print("MESSAGE:", repr(e))
+            print("=" * 70 + "\n")
+
+    answer = successful[0]
+
+    if emergency:
+        answer = (
+            "⚠️ **Potential emergency**\n\n"
+            "If the symptoms are severe, worsening, or "
+            "life-threatening, seek urgent medical attention. "
+            "In India, call **112**.\n\n"
+            + answer
+        )
+
+    return answer
