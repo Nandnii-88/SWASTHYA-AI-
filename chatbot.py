@@ -663,10 +663,11 @@ def ask_gemini(
 
     if gemini_client is not None:
 
+          if gemini_client is not None:
+
         synthesis_prompt = f"""
 {SYSTEM_PROMPT}
 
 Requested language:
 {language_name}
-
-User message
+...
